@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # File to store selections
 data_file = "wfh_selections.csv"
@@ -16,7 +16,7 @@ staff_members = [
 def load_data():
     if os.path.exists(data_file):
         return pd.read_csv(data_file)
-    return pd.DataFrame(columns=["Name", "Week", "Day", "Date"])
+    return pd.DataFrame(columns=["Name", "Week", "Week Starting", "Day", "Date"])
 
 def save_data(df):
     df.to_csv(data_file, index=False)
@@ -24,54 +24,53 @@ def save_data(df):
 data = load_data()
 
 # Streamlit UI
-st.title("Work From Home Selection")
-st.write("Select your Work From Home day for the current week.")
+st.title("🏠 Work From Home Selection")
+st.write("📅 Select your Work From Home day for the current week.")
 
-# Get current week number and year
+# Get current week number, year, and Monday date
 current_week = datetime.today().strftime("%Y-%W")
+week_start = (datetime.today() - timedelta(days=datetime.today().weekday())).date()
+st.subheader(f"📆 Current Week Selections (Week Starting {week_start.strftime('%d %B %Y')})")
 
 # Selection form
 with st.form("wfh_form"):
-    name = st.selectbox("Select your name", staff_members)
-    day = st.radio("Choose your WFH day", ["Thursday", "Friday"])
-    submit = st.form_submit_button("Submit")
+    name = st.selectbox("👤 Select your name", staff_members)
+    day = st.radio("📌 Choose your WFH day", ["Thursday", "Friday"])
+    submit = st.form_submit_button("✅ Submit")
     
     if submit:
         existing_entry = data[(data["Name"] == name) & (data["Week"] == current_week)]
         if not existing_entry.empty:
-            st.warning("You have already selected a day for this week.")
+            st.warning("⚠️ You have already selected a day for this week.")
         else:
             new_entry = pd.DataFrame({
-                "Name": [name], "Week": [current_week], "Day": [day], "Date": [datetime.today().date()]
+                "Name": [name], "Week": [current_week], "Week Starting": [week_start], "Day": [day], "Date": [datetime.today().date()]
             })
             data = pd.concat([data, new_entry], ignore_index=True)
             save_data(data)
-            st.success(f"{name} selected {day} for WFH this week.")
+            st.success(f"🎉 {name} selected {day} for WFH this week.")
 
 # Display current week's selections
-st.subheader("Current Week Selections")
 current_week_data = data[data["Week"] == current_week]
 st.dataframe(current_week_data)
 
-# Display all past selections
-st.subheader("All Past Selections")
-st.dataframe(data)
-
 # Download options
-st.subheader("Download Data")
-file_format = st.radio("Select format", ["CSV", "Excel", "Text"], horizontal=True)
+st.subheader("📥 Download Data")
+file_format = st.radio("📝 Select format", ["CSV", "Excel", "Text"], horizontal=True)
 
 def convert_to_file(format):
+    download_data = data[["Week", "Week Starting", "Name", "Day", "Date"]]
     if format == "CSV":
-        return data.to_csv(index=False).encode('utf-8'), "wfh_selections.csv"
+        return download_data.to_csv(index=False).encode('utf-8'), "wfh_selections.csv"
     elif format == "Excel":
         excel_file = "wfh_selections.xlsx"
-        data.to_excel(excel_file, index=False)
+        with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+            download_data.to_excel(writer, index=False)
         return excel_file, "wfh_selections.xlsx"
     else:
-        text_data = data.to_string(index=False)
+        text_data = download_data.to_string(index=False)
         return text_data.encode('utf-8'), "wfh_selections.txt"
 
-if st.button("Download"):
+if st.button("📂 Download"):
     file_content, file_name = convert_to_file(file_format)
-    st.download_button("Download File", file_content, file_name)
+    st.download_button("📥 Download File", file_content, file_name)
