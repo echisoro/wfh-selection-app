@@ -15,7 +15,13 @@ staff_members = [
 # Load or create data file
 def load_data():
     if os.path.exists(data_file):
-        return pd.read_csv(data_file)
+        df = pd.read_csv(data_file)
+        # Ensure required columns exist
+        expected_columns = ["Name", "Week", "Week Starting", "Day", "Date"]
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = None  # Add missing columns if needed
+        return df
     return pd.DataFrame(columns=["Name", "Week", "Week Starting", "Day", "Date"])
 
 def save_data(df):
@@ -54,6 +60,18 @@ with st.form("wfh_form"):
 current_week_data = data[data["Week"] == current_week]
 st.dataframe(current_week_data)
 
+# Add Reset Data Button with Authentication
+if st.button("🗑️ Reset Data"):
+    password = st.text_input("🔑 Enter Admin Password to Reset Data:", type="password")
+    if password == "tamuda":
+        os.remove(data_file) if os.path.exists(data_file) else None
+        data = pd.DataFrame(columns=["Name", "Week", "Week Starting", "Day", "Date"])
+        save_data(data)
+        st.success("🔄 All previous selections have been cleared!")
+        st.experimental_rerun()
+    elif password:
+        st.error("❌ Incorrect password! Data reset not allowed.")
+
 # Download options
 st.subheader("📥 Download Data")
 file_format = st.radio("📝 Select format", ["CSV", "Excel", "Text"], horizontal=True)
@@ -65,8 +83,9 @@ def convert_to_file(format):
     elif format == "Excel":
         excel_file = "wfh_selections.xlsx"
         with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
-            download_data.to_excel(writer, index=False)
-        return excel_file, "wfh_selections.xlsx"
+            download_data.to_excel(writer, index=False, sheet_name="WFH Data")
+        with open(excel_file, "rb") as f:
+            return f.read(), "wfh_selections.xlsx"
     else:
         text_data = download_data.to_string(index=False)
         return text_data.encode('utf-8'), "wfh_selections.txt"
