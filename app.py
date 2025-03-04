@@ -65,7 +65,7 @@ with st.form("wfh_form"):
             data = pd.concat([data, new_entry], ignore_index=True)
             save_data(data)
             st.success(f"🎉 {name} selected {day} for WFH this week.")
-            st.experimental_rerun()
+            st.rerun()
 
 # Display current week's selections
 current_week_data = data[data["Week"] == current_week]
@@ -80,7 +80,7 @@ if st.button("🗑️ Reset Data"):
         data = pd.DataFrame(columns=["Name", "Week", "Week Starting", "Day", "WFH Date"])
         save_data(data)
         st.success("🔄 All previous selections have been cleared!")
-        st.experimental_rerun()
+        st.rerun()
     elif password:
         st.error("❌ Incorrect password! Data reset not allowed.")
 
