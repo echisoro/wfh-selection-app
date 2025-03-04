@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import xlsxwriter
 from datetime import datetime, timedelta
 
 # File to store selections
@@ -55,6 +56,7 @@ with st.form("wfh_form"):
             data = pd.concat([data, new_entry], ignore_index=True)
             save_data(data)
             st.success(f"🎉 {name} selected {day} for WFH this week.")
+            st.experimental_rerun()
 
 # Display current week's selections
 current_week_data = data[data["Week"] == current_week]
@@ -64,7 +66,8 @@ st.dataframe(current_week_data)
 if st.button("🗑️ Reset Data"):
     password = st.text_input("🔑 Enter Admin Password to Reset Data:", type="password")
     if password == "tamuda":
-        os.remove(data_file) if os.path.exists(data_file) else None
+        if os.path.exists(data_file):
+            os.remove(data_file)
         data = pd.DataFrame(columns=["Name", "Week", "Week Starting", "Day", "Date"])
         save_data(data)
         st.success("🔄 All previous selections have been cleared!")
